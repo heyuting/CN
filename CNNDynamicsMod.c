@@ -1,145 +1,29 @@
-module CNNDynamicsMod
+void CNNDeposition(nflux_type *nf, Model_Data DS, double t)
+{
+/*
+ * DESCRIPTION:
+ * On the radiation time step, update the nitrogen deposition rate
+ * from atmospheric forcing. For now it is assumed that all the atmospheric
+ * N deposition goes to the soil mineral N pool.
+ * This could be updated later to divide the inputs between mineral N absorbed
+ * directly into the canopy and mineral N entering the soil pool.
+ */
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !MODULE: CNNDynamicsMod
-!
-! !DESCRIPTION:
-! Module for mineral nitrogen dynamics (deposition, fixation, leaching)
-! for coupled carbon-nitrogen code.
-!
-! !USES:
-   use shr_kind_mod, only: r8 => shr_kind_r8
-   implicit none
-   save
-   private
-! !PUBLIC MEMBER FUNCTIONS:
-   public :: CNNDeposition
-   public :: CNNFixation
-   public :: CNNLeaching
-!
-! !REVISION HISTORY:
-! 6/1/04: Created by Peter Thornton
-!
-!EOP
-!-----------------------------------------------------------------------
+    nf->ndep_to_sminn = Interpolation (&DS->Forcing[14][0], t); /* nitrogen deposition rate (gN/m2/s) */
+}
 
-contains
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: CNNDeposition
-!
-! !INTERFACE:
-subroutine CNNDeposition( lbc, ubc )
-!
-! !DESCRIPTION:
-! On the radiation time step, update the nitrogen deposition rate
-! from atmospheric forcing. For now it is assumed that all the atmospheric
-! N deposition goes to the soil mineral N pool.
-! This could be updated later to divide the inputs between mineral N absorbed
-! directly into the canopy and mineral N entering the soil pool.
-!
-! !USES:
-   use clmtype
-   use clm_atmlnd   , only : clm_a2l
-!
-! !ARGUMENTS:
-   implicit none
-   integer, intent(in) :: lbc, ubc        ! column bounds
-!
-! !CALLED FROM:
-! subroutine CNEcosystemDyn, in module CNEcosystemDynMod.F90
-!
-! !REVISION HISTORY:
-! 6/1/04: Created by Peter Thornton
-! 11/06/09: Copy to all columns NOT just over soil. S. Levis
-!
-! !LOCAL VARIABLES:
-! local pointers to implicit in scalars
-!
-   real(r8), pointer :: forc_ndep(:)  ! nitrogen deposition rate (gN/m2/s)
-   integer , pointer :: gridcell(:)   ! index into gridcell level quantities
-!
-! local pointers to implicit out scalars
-!
-   real(r8), pointer :: ndep_to_sminn(:)
-!
-! !OTHER LOCAL VARIABLES:
-   integer :: g,c                    ! indices
-
-!EOP
-!-----------------------------------------------------------------------
-   ! Assign local pointers to derived type arrays (in)
-   forc_ndep     => clm_a2l%forc_ndep
-   gridcell      => col%gridcell
-
-   ! Assign local pointers to derived type arrays (out)
-   ndep_to_sminn => cnf%ndep_to_sminn
-
-   ! Loop through columns
-   do c = lbc, ubc
-      g = gridcell(c)
-
-      ndep_to_sminn(c) = forc_ndep(g)
-      
-   end do
-
-end subroutine CNNDeposition
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: CNNFixation
-!
-! !INTERFACE:
-subroutine CNNFixation(num_soilc, filter_soilc)
-!
-! !DESCRIPTION:
-! On the radiation time step, update the nitrogen fixation rate
-! as a function of annual total NPP. This rate gets updated once per year.
-! All N fixation goes to the soil mineral N pool.
-!
-! !USES:
-   use clmtype
-   use clm_varctl      , only: iulog
-   use clm_time_manager, only: get_days_per_year
-   use shr_sys_mod     , only: shr_sys_flush
-   use clm_varcon      , only: secspday
-!
-! !ARGUMENTS:
-   implicit none
-   integer, intent(in) :: num_soilc       ! number of soil columns in filter
-   integer, intent(in) :: filter_soilc(:) ! filter for soil columns
-!
-! !CALLED FROM:
-! subroutine CNEcosystemDyn, in module CNEcosystemDynMod.F90
-!
-! !REVISION HISTORY:
-! 6/1/04: Created by Peter Thornton
-! 2/14/05, PET: After looking at a number of point simulations,
-!               it looks like a constant Nfix might be more efficient and 
-!               maybe more realistic - setting to constant 0.4 gN/m2/yr.
-!
-! !LOCAL VARIABLES:
-! local pointers to implicit in scalars
-!
-   real(r8), pointer :: cannsum_npp(:) ! nitrogen deposition rate (gN/m2/s)
-!
-! local pointers to implicit out scalars
-!
-   real(r8), pointer :: nfix_to_sminn(:)
-!
-! !OTHER LOCAL VARIABLES:
+void CNNFixation(pstate_type *ps, nflux_type *nf)
+{
+/*
+ * DESCRIPTION:
+ * On the radiation time step, update the nitrogen fixation rate
+ * as a function of annual total NPP. This rate gets updated once per year.
+ * All N fixation goes to the soil mineral N pool.
+ */
    integer  :: c,fc                  ! indices
-   real(r8) :: t                     ! temporary
+    double t;       /* temporary */
    real(r8) :: dayspyr               ! days per year
 
-!EOP
-!-----------------------------------------------------------------------
-   ! Assign local pointers to derived type arrays (in)
    cannsum_npp   => cps%cannsum_npp
 
    ! Assign local pointers to derived type arrays (out)
@@ -147,24 +31,19 @@ subroutine CNNFixation(num_soilc, filter_soilc)
 
    dayspyr = get_days_per_year()
 
-   ! Loop through columns
-   do fc = 1,num_soilc
-      c = filter_soilc(fc)
+    /* 
+     * the value 0.001666 is set to give 100 TgN/yr when global
+     * NPP = 60 PgC/yr.  (Cleveland et al., 1999)
+     * Convert from gN/m2/yr -> gN/m2/s
+     */
 
-      ! the value 0.001666 is set to give 100 TgN/yr when global
-      ! NPP = 60 PgC/yr.  (Cleveland et al., 1999)
-      ! Convert from gN/m2/yr -> gN/m2/s
-      !t = cannsum_npp(c) * 0.001666_r8 / (secspday * dayspyr)
-      t = (1.8_r8 * (1._r8 - exp(-0.003_r8 * cannsum_npp(c))))/(secspday * dayspyr)
-      nfix_to_sminn(c) = max(0._r8,t)
-      ! PET 2/14/05: commenting out the dependence on NPP, and
-      ! forcing Nfix to global constant = 0.4 gN/m2/yr
-      !nfix_to_sminn(c) = 0.4 / (secspday*dayspyr)
-
-   end do
-
-end subroutine CNNFixation
-
+//  t = cannsum_npp(c) * 0.001666_r8 / (secspday * dayspyr)
+    t = (1.8 * (1. - exp(-0.003 * ps->annsum_npp))) / (secspday * dayspyr);
+    nf->nfix_to_sminn = t > 0. ? t : 0.;
+    /* PET 2/14/05: commenting out the dependence on NPP, and
+     * forcing Nfix to global constant = 0.4 gN/m2/yr
+     * nfix_to_sminn(c) = 0.4 / (secspday*dayspyr) */
+}
 !-----------------------------------------------------------------------
 !BOP
 !

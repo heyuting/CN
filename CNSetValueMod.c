@@ -1,210 +1,54 @@
-module CNSetValueMod
+void CNZeroFluxes(pft_cflux_type *pcf, pft_nflux_type *pnf)
+{
+    /*
+     * zero the pft-level C and N fluxes
+     */
+    CNSetPcf (0., pcf);
+    CNSetPnf (0., pnf);
+}
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !MODULE: CNSetValueMod
-!
-! !DESCRIPTION:
-! contains code to set all CN variables to specified value
-! Used for both initialization of special landunit values, and
-! setting fluxes to 0.0 at the beginning of each time step
-! 3/23/09, Peter Thornton: Added new subroutine, CNZeroFluxes_dwt(), 
-!     which initialize flux variables used in the pftdyn
-!     routines. This is called from clm_driver1, as
-!     these variables need to be initialized outside of the clumps loop.
-!
-! !USES:
-    use shr_kind_mod, only: r8 => shr_kind_r8
-    use clm_varpar  , only: nlevgrnd
-    use clm_varctl  , only: iulog, use_c13, use_cn, use_cndv
-    use clmtype
-    implicit none
-    save
-    private
-! !PUBLIC MEMBER FUNCTIONS:
-    public :: CNZeroFluxes
-    public :: CNZeroFluxes_dwt
-    public :: CNSetPps
-    public :: CNSetPepv
-    public :: CNSetPcs
-    public :: CNSetPns
-    public :: CNSetPcf
-    public :: CNSetPnf
-    public :: CNSetCps
-    public :: CNSetCcs
-    public :: CNSetCns
-    public :: CNSetCcf
-    public :: CNSetCnf
-! !PRIVATE MEMBER FUNCTIONS:
-!
-! !REVISION HISTORY:
-! 9/04/03: Created by Peter Thornton
-!
-!EOP
-!-----------------------------------------------------------------------
+void CNZeroFluxes_dwt(column_cflux_type *ccf)
+{
+    int c, p;           /* indices */
+//    type(column_type),   pointer :: cptr         ! pointer to column derived subtype
 
-contains
+//    cptr => col
+    /*
+     * set column-level conversion and product pool fluxes
+     * to 0 at the beginning of every timestep
+     */
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: CNZeroFluxes
-!
-! !INTERFACE:
-subroutine CNZeroFluxes(num_filterc, filterc, num_filterp, filterp)
-!
-! !DESCRIPTION:
-!
-! !USES:
-!
-! !ARGUMENTS:
-    implicit none
-    integer, intent(in) :: num_filterc ! number of good values in filterc
-    integer, intent(in) :: filterc(:)  ! column filter
-    integer, intent(in) :: num_filterp ! number of good values in filterp
-    integer, intent(in) :: filterp(:)  ! pft filter
-!
-! !CALLED FROM:
-! subroutine CNEcosystemDyn in module CNEcosystemDynMod.F90
-!
-! !REVISION HISTORY:
-! 9/04/03: Created by Peter Thornton
-!
-! !LOCAL VARIABLES:
-! local pointers to implicit in scalars
-!
-!
-! local pointers to implicit in/out scalars
-!
-!
-! local pointers to implicit out scalars
-!
-!
-! !OTHER LOCAL VARIABLES:
-!EOP
-!-----------------------------------------------------------------------
+    /* C fluxes */
+    ccf->dwt_seedc_to_leaf = 0.;
+    ccf->dwt_seedc_to_deadstem = 0.;
+    ccf->dwt_conv_cflux = 0.;
+    ccf->dwt_prod10c_gain = 0.;
+    ccf->dwt_prod100c_gain = 0.;
+    ccf->dwt_frootc_to_litr1c = 0.;
+    ccf->dwt_frootc_to_litr2c = 0.;
+    ccf->dwt_frootc_to_litr3c = 0.;
+    ccf->dwt_livecrootc_to_cwdc = 0.;
+    ccf->dwt_deadcrootc_to_cwdc = 0.;
+    /* N fluxes */
+    cnf->dwt_seedn_to_leaf = 0.;
+    cnf->dwt_seedn_to_deadstem = 0.;
+    cnf->dwt_conv_nflux = 0.;
+    cnf->dwt_prod10n_gain = 0.;
+    cnf->dwt_prod100n_gain = 0.;
+    cnf->dwt_frootn_to_litr1n = 0.;
+    cnf->dwt_frootn_to_litr2n = 0.;
+    cnf->dwt_frootn_to_litr3n = 0.;
+    cnf->dwt_livecrootn_to_cwdn = 0.;
+    cnf->dwt_deadcrootn_to_cwdn = 0.;
 
-    ! zero the column-level C and N fluxes
-    call CNSetCcf(num_filterc, filterc, 0._r8, ccf)
-    if (use_c13) then
-       call CNSetCcf(num_filterc, filterc, 0._r8, cc13f)
-    end if
-    call CNSetCnf(num_filterc, filterc, 0._r8, cnf)
-
-    ! zero the column-average pft-level C and N fluxes
-    call CNSetPcf(num_filterc, filterc, 0._r8, pcf_a)
-    call CNSetPnf(num_filterc, filterc, 0._r8, pnf_a)
-
-    ! zero the pft-level C and N fluxes
-    call CNSetPcf(num_filterp, filterp, 0._r8, pcf)
-    if (use_c13) then
-       call CNSetPcf(num_filterp, filterp, 0._r8, pc13f)
-    end if
-    call CNSetPnf(num_filterp, filterp, 0._r8, pnf)
-
-end subroutine CNZeroFluxes
-!-----------------------------------------------------------------------
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: CNZeroFluxes_dwt
-!
-! !INTERFACE:
-subroutine CNZeroFluxes_dwt( begc, endc, begp, endp )
-!
-! !DESCRIPTION:
-!
-! !USES:
-!
-! !ARGUMENTS:
-    implicit none
-    integer, intent(IN)  :: begc, endc    ! proc beginning and ending column indices
-    integer, intent(IN)  :: begp, endp    ! proc beginning and ending pft indices
-!
-! !CALLED FROM:
-! subroutine clm_driver1
-!
-! !REVISION HISTORY:
-! 3/23/09: Created by Peter Thornton
-!
-! !LOCAL VARIABLES:
-! local pointers to implicit in scalars
-!
-!
-! local pointers to implicit in/out scalars
-!
-!
-! local pointers to implicit out scalars
-!
-!
-! !OTHER LOCAL VARIABLES:
-    integer  :: c, p          ! indices
-    type(column_type),   pointer :: cptr         ! pointer to column derived subtype
-!EOP
-!-----------------------------------------------------------------------
-
-    cptr => col
-    ! set column-level conversion and product pool fluxes
-    ! to 0 at the beginning of every timestep
-
-    do c = begc,endc
-       ! C fluxes
-       ccf%dwt_seedc_to_leaf(c) = 0._r8
-       ccf%dwt_seedc_to_deadstem(c) = 0._r8
-       ccf%dwt_conv_cflux(c) = 0._r8
-       ccf%dwt_prod10c_gain(c) = 0._r8
-       ccf%dwt_prod100c_gain(c) = 0._r8
-       ccf%dwt_frootc_to_litr1c(c) = 0._r8
-       ccf%dwt_frootc_to_litr2c(c) = 0._r8
-       ccf%dwt_frootc_to_litr3c(c) = 0._r8
-       ccf%dwt_livecrootc_to_cwdc(c) = 0._r8
-       ccf%dwt_deadcrootc_to_cwdc(c) = 0._r8
-       if (use_c13) then
-          ! C13 fluxes
-          cc13f%dwt_seedc_to_leaf(c) = 0._r8
-          cc13f%dwt_seedc_to_deadstem(c) = 0._r8
-          cc13f%dwt_conv_cflux(c) = 0._r8
-          cc13f%dwt_prod10c_gain(c) = 0._r8
-          cc13f%dwt_prod100c_gain(c) = 0._r8
-          cc13f%dwt_frootc_to_litr1c(c) = 0._r8
-          cc13f%dwt_frootc_to_litr2c(c) = 0._r8
-          cc13f%dwt_frootc_to_litr3c(c) = 0._r8
-          cc13f%dwt_livecrootc_to_cwdc(c) = 0._r8
-          cc13f%dwt_deadcrootc_to_cwdc(c) = 0._r8
-       end if
-       ! N fluxes
-       cnf%dwt_seedn_to_leaf(c) = 0._r8
-       cnf%dwt_seedn_to_deadstem(c) = 0._r8
-       cnf%dwt_conv_nflux(c) = 0._r8
-       cnf%dwt_prod10n_gain(c) = 0._r8
-       cnf%dwt_prod100n_gain(c) = 0._r8
-       cnf%dwt_frootn_to_litr1n(c) = 0._r8
-       cnf%dwt_frootn_to_litr2n(c) = 0._r8
-       cnf%dwt_frootn_to_litr3n(c) = 0._r8
-       cnf%dwt_livecrootn_to_cwdn(c) = 0._r8
-       cnf%dwt_deadcrootn_to_cwdn(c) = 0._r8
-    end do
-    if (use_cn) then
-       do p = begp,endp
-          pcs%dispvegc(p)   = 0._r8
-          pcs%storvegc(p)   = 0._r8
-          pcs%totpftc(p)    = 0._r8
-          if (use_c13) then
-             pc13s%dispvegc(p) = 0._r8
-             pc13s%storvegc(p) = 0._r8
-             pc13s%totpftc(p)  = 0._r8
-          end if
-          pns%dispvegn(p)   = 0._r8
-          pns%storvegn(p)   = 0._r8
-          pns%totvegn(p)    = 0._r8
-          pns%totpftn(p)    = 0._r8
-       end do
-    end if
-    
-end subroutine CNZeroFluxes_dwt
-!-----------------------------------------------------------------------
+    pcs->dispvegc   = 0.;
+    pcs->storvegc   = 0.;
+    pcs->totpftc    = 0.;
+    pns->dispvegn   = 0.;
+    pns->storvegn   = 0.;
+    pns->totvegn    = 0.;
+    pns->totpftn    = 0.;
+}    
 
 !-----------------------------------------------------------------------
 !BOP
@@ -484,351 +328,262 @@ subroutine CNSetPns(num, filter, val, pns)
    end do
 
 end subroutine CNSetPns
-!-----------------------------------------------------------------------
+void CNSetPcf(double val, pft_cflux_type *pcf)
+{
+    pcf->m_leafc_to_litter = val;
+    pcf->m_frootc_to_litter = val;
+    pcf->m_leafc_storage_to_litter = val;
+    pcf->m_frootc_storage_to_litter = val;
+    pcf->m_livestemc_storage_to_litter = val;
+    pcf->m_deadstemc_storage_to_litter = val;
+    pcf->m_livecrootc_storage_to_litter = val;
+    pcf->m_deadcrootc_storage_to_litter = val;
+    pcf->m_leafc_xfer_to_litter = val;
+    pcf->m_frootc_xfer_to_litter = val;
+    pcf->m_livestemc_xfer_to_litter = val;
+    pcf->m_deadstemc_xfer_to_litter = val;
+    pcf->m_livecrootc_xfer_to_litter = val;
+    pcf->m_deadcrootc_xfer_to_litter = val;
+    pcf->m_livestemc_to_litter = val;
+    pcf->m_deadstemc_to_litter = val;
+    pcf->m_livecrootc_to_litter = val;
+    pcf->m_deadcrootc_to_litter = val;
+    pcf->m_gresp_storage_to_litter = val;
+    pcf->m_gresp_xfer_to_litter = val;
+    pcf->hrv_leafc_to_litter = val             ;
+    pcf->hrv_leafc_storage_to_litter = val     ;
+    pcf->hrv_leafc_xfer_to_litter = val        ;
+    pcf->hrv_frootc_to_litter = val            ;
+    pcf->hrv_frootc_storage_to_litter = val    ;
+    pcf->hrv_frootc_xfer_to_litter = val       ;
+    pcf->hrv_livestemc_to_litter = val         ;
+    pcf->hrv_livestemc_storage_to_litter = val ;
+    pcf->hrv_livestemc_xfer_to_litter = val    ;
+    pcf->hrv_deadstemc_to_prod10c = val        ;
+    pcf->hrv_deadstemc_to_prod100c = val       ;
+    pcf->hrv_deadstemc_storage_to_litter = val ;
+    pcf->hrv_deadstemc_xfer_to_litter = val    ;
+    pcf->hrv_livecrootc_to_litter = val        ;
+    pcf->hrv_livecrootc_storage_to_litter = val;
+    pcf->hrv_livecrootc_xfer_to_litter = val   ;
+    pcf->hrv_deadcrootc_to_litter = val        ;
+    pcf->hrv_deadcrootc_storage_to_litter = val;
+    pcf->hrv_deadcrootc_xfer_to_litter = val   ;
+    pcf->hrv_gresp_storage_to_litter = val     ;
+    pcf->hrv_gresp_xfer_to_litter = val        ;
+    pcf->hrv_xsmrpool_to_atm = val                 ;
+    pcf->m_leafc_to_fire = val;
+    pcf->m_frootc_to_fire = val;
+    pcf->m_leafc_storage_to_fire = val;
+    pcf->m_frootc_storage_to_fire = val;
+    pcf->m_livestemc_storage_to_fire = val;
+    pcf->m_deadstemc_storage_to_fire = val;
+    pcf->m_livecrootc_storage_to_fire = val;
+    pcf->m_deadcrootc_storage_to_fire = val;
+    pcf->m_leafc_xfer_to_fire = val;
+    pcf->m_frootc_xfer_to_fire = val;
+    pcf->m_livestemc_xfer_to_fire = val;
+    pcf->m_deadstemc_xfer_to_fire = val;
+    pcf->m_livecrootc_xfer_to_fire = val;
+    pcf->m_deadcrootc_xfer_to_fire = val;
+    pcf->m_livestemc_to_fire = val;
+    pcf->m_deadstemc_to_fire = val;
+    pcf->m_deadstemc_to_litter_fire = val;
+    pcf->m_livecrootc_to_fire = val;
+    pcf->m_deadcrootc_to_fire = val;
+    pcf->m_deadcrootc_to_litter_fire = val;
+    pcf->m_gresp_storage_to_fire = val;
+    pcf->m_gresp_xfer_to_fire = val;
+    pcf->leafc_xfer_to_leafc = val;
+    pcf->frootc_xfer_to_frootc = val;
+    pcf->livestemc_xfer_to_livestemc = val;
+    pcf->deadstemc_xfer_to_deadstemc = val;
+    pcf->livecrootc_xfer_to_livecrootc = val;
+    pcf->deadcrootc_xfer_to_deadcrootc = val;
+    pcf->leafc_to_litter = val;
+    pcf->frootc_to_litter = val;
+    pcf->leaf_mr = val;
+    pcf->froot_mr = val;
+    pcf->livestem_mr = val;
+    pcf->livecroot_mr = val;
+    pcf->leaf_curmr = val;
+    pcf->froot_curmr = val;
+    pcf->livestem_curmr = val;
+    pcf->livecroot_curmr = val;
+    pcf->leaf_xsmr = val;
+    pcf->froot_xsmr = val;
+    pcf->livestem_xsmr = val;
+    pcf->livecroot_xsmr = val;
+    pcf->psnsun_to_cpool = val;
+    pcf->psnshade_to_cpool = val;
+    pcf->cpool_to_xsmrpool = val;
+    pcf->cpool_to_leafc = val;
+    pcf->cpool_to_leafc_storage = val;
+    pcf->cpool_to_frootc = val;
+    pcf->cpool_to_frootc_storage = val;
+    pcf->cpool_to_livestemc = val;
+    pcf->cpool_to_livestemc_storage = val;
+    pcf->cpool_to_deadstemc = val;
+    pcf->cpool_to_deadstemc_storage = val;
+    pcf->cpool_to_livecrootc = val;
+    pcf->cpool_to_livecrootc_storage = val;
+    pcf->cpool_to_deadcrootc = val;
+    pcf->cpool_to_deadcrootc_storage = val;
+    pcf->cpool_to_gresp_storage = val;
+    pcf->cpool_leaf_gr = val;
+    pcf->cpool_leaf_storage_gr = val;
+    pcf->transfer_leaf_gr = val;
+    pcf->cpool_froot_gr = val;
+    pcf->cpool_froot_storage_gr = val;
+    pcf->transfer_froot_gr = val;
+    pcf->cpool_livestem_gr = val;
+    pcf->cpool_livestem_storage_gr = val;
+    pcf->transfer_livestem_gr = val;
+    pcf->cpool_deadstem_gr = val;
+    pcf->cpool_deadstem_storage_gr = val;
+    pcf->transfer_deadstem_gr = val;
+    pcf->cpool_livecroot_gr = val;
+    pcf->cpool_livecroot_storage_gr = val;
+    pcf->transfer_livecroot_gr = val;
+    pcf->cpool_deadcroot_gr = val;
+    pcf->cpool_deadcroot_storage_gr = val;
+    pcf->transfer_deadcroot_gr = val;
+    pcf->leafc_storage_to_xfer = val;
+    pcf->frootc_storage_to_xfer = val;
+    pcf->livestemc_storage_to_xfer = val;
+    pcf->deadstemc_storage_to_xfer = val;
+    pcf->livecrootc_storage_to_xfer = val;
+    pcf->deadcrootc_storage_to_xfer = val;
+    pcf->gresp_storage_to_xfer = val;
+    pcf->livestemc_to_deadstemc = val;
+    pcf->livecrootc_to_deadcrootc = val;
+    pcf->gpp = val;
+    pcf->mr = val;
+    pcf->current_gr = val;
+    pcf->transfer_gr = val;
+    pcf->storage_gr = val;
+    pcf->gr = val;
+    pcf->ar = val;
+    pcf->rr = val;
+    pcf->npp = val;
+    pcf->agnpp = val;
+    pcf->bgnpp = val;
+    pcf->litfall = val;
+    pcf->vegfire = val;
+    pcf->wood_harvestc = val;
+    pcf->pft_cinputs = val;
+    pcf->pft_coutputs = val;
+    pcf->pft_fire_closs = val;
+    pcf->frootc_alloc = val;
+    pcf->frootc_loss = val;
+    pcf->leafc_alloc = val;
+    pcf->leafc_loss = val;
+    pcf->woodc_alloc = val;
+    pcf->woodc_loss = val;
+}
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: CNSetPcf
-!
-! !INTERFACE:
-subroutine CNSetPcf(num, filter, val, pcf)
-!
-! !DESCRIPTION:
-! Set pft carbon flux variables
-!
-! !USES:
-    use surfrdMod , only : crop_prog
-! !ARGUMENTS:
-    implicit none
-    integer , intent(in) :: num
-    integer , intent(in) :: filter(:)
-    real(r8), intent(in) :: val
-    type (pft_cflux_type), intent(inout) :: pcf
-!
-! !REVISION HISTORY:
-! Created by Peter Thornton
-!
-! !LOCAL VARIABLES:
-! local pointers to implicit in/out arrays
-!
-! !OTHER LOCAL VARIABLES:
-   integer :: fi,i     ! loop index
-!EOP
-!------------------------------------------------------------------------
+void CNSetPnf(double val, pft_nflux_type *pnf)
+{
 
-   do fi = 1,num
-      i = filter(fi)
-      pcf%m_leafc_to_litter(i) = val
-      pcf%m_frootc_to_litter(i) = val
-      pcf%m_leafc_storage_to_litter(i) = val
-      pcf%m_frootc_storage_to_litter(i) = val
-      pcf%m_livestemc_storage_to_litter(i) = val
-      pcf%m_deadstemc_storage_to_litter(i) = val
-      pcf%m_livecrootc_storage_to_litter(i) = val
-      pcf%m_deadcrootc_storage_to_litter(i) = val
-      pcf%m_leafc_xfer_to_litter(i) = val
-      pcf%m_frootc_xfer_to_litter(i) = val
-      pcf%m_livestemc_xfer_to_litter(i) = val
-      pcf%m_deadstemc_xfer_to_litter(i) = val
-      pcf%m_livecrootc_xfer_to_litter(i) = val
-      pcf%m_deadcrootc_xfer_to_litter(i) = val
-      pcf%m_livestemc_to_litter(i) = val
-      pcf%m_deadstemc_to_litter(i) = val
-      pcf%m_livecrootc_to_litter(i) = val
-      pcf%m_deadcrootc_to_litter(i) = val
-      pcf%m_gresp_storage_to_litter(i) = val
-      pcf%m_gresp_xfer_to_litter(i) = val
-      pcf%hrv_leafc_to_litter(i) = val             
-      pcf%hrv_leafc_storage_to_litter(i) = val     
-      pcf%hrv_leafc_xfer_to_litter(i) = val        
-      pcf%hrv_frootc_to_litter(i) = val            
-      pcf%hrv_frootc_storage_to_litter(i) = val    
-      pcf%hrv_frootc_xfer_to_litter(i) = val       
-      pcf%hrv_livestemc_to_litter(i) = val         
-      pcf%hrv_livestemc_storage_to_litter(i) = val 
-      pcf%hrv_livestemc_xfer_to_litter(i) = val    
-      pcf%hrv_deadstemc_to_prod10c(i) = val        
-      pcf%hrv_deadstemc_to_prod100c(i) = val       
-      pcf%hrv_deadstemc_storage_to_litter(i) = val 
-      pcf%hrv_deadstemc_xfer_to_litter(i) = val    
-      pcf%hrv_livecrootc_to_litter(i) = val        
-      pcf%hrv_livecrootc_storage_to_litter(i) = val
-      pcf%hrv_livecrootc_xfer_to_litter(i) = val   
-      pcf%hrv_deadcrootc_to_litter(i) = val        
-      pcf%hrv_deadcrootc_storage_to_litter(i) = val
-      pcf%hrv_deadcrootc_xfer_to_litter(i) = val   
-      pcf%hrv_gresp_storage_to_litter(i) = val     
-      pcf%hrv_gresp_xfer_to_litter(i) = val        
-      pcf%hrv_xsmrpool_to_atm(i) = val                 
-      pcf%m_leafc_to_fire(i) = val
-      pcf%m_frootc_to_fire(i) = val
-      pcf%m_leafc_storage_to_fire(i) = val
-      pcf%m_frootc_storage_to_fire(i) = val
-      pcf%m_livestemc_storage_to_fire(i) = val
-      pcf%m_deadstemc_storage_to_fire(i) = val
-      pcf%m_livecrootc_storage_to_fire(i) = val
-      pcf%m_deadcrootc_storage_to_fire(i) = val
-      pcf%m_leafc_xfer_to_fire(i) = val
-      pcf%m_frootc_xfer_to_fire(i) = val
-      pcf%m_livestemc_xfer_to_fire(i) = val
-      pcf%m_deadstemc_xfer_to_fire(i) = val
-      pcf%m_livecrootc_xfer_to_fire(i) = val
-      pcf%m_deadcrootc_xfer_to_fire(i) = val
-      pcf%m_livestemc_to_fire(i) = val
-      pcf%m_deadstemc_to_fire(i) = val
-      pcf%m_deadstemc_to_litter_fire(i) = val
-      pcf%m_livecrootc_to_fire(i) = val
-      pcf%m_deadcrootc_to_fire(i) = val
-      pcf%m_deadcrootc_to_litter_fire(i) = val
-      pcf%m_gresp_storage_to_fire(i) = val
-      pcf%m_gresp_xfer_to_fire(i) = val
-      pcf%leafc_xfer_to_leafc(i) = val
-      pcf%frootc_xfer_to_frootc(i) = val
-      pcf%livestemc_xfer_to_livestemc(i) = val
-      pcf%deadstemc_xfer_to_deadstemc(i) = val
-      pcf%livecrootc_xfer_to_livecrootc(i) = val
-      pcf%deadcrootc_xfer_to_deadcrootc(i) = val
-      pcf%leafc_to_litter(i) = val
-      pcf%frootc_to_litter(i) = val
-      pcf%leaf_mr(i) = val
-      pcf%froot_mr(i) = val
-      pcf%livestem_mr(i) = val
-      pcf%livecroot_mr(i) = val
-      pcf%leaf_curmr(i) = val
-      pcf%froot_curmr(i) = val
-      pcf%livestem_curmr(i) = val
-      pcf%livecroot_curmr(i) = val
-      pcf%leaf_xsmr(i) = val
-      pcf%froot_xsmr(i) = val
-      pcf%livestem_xsmr(i) = val
-      pcf%livecroot_xsmr(i) = val
-      pcf%psnsun_to_cpool(i) = val
-      pcf%psnshade_to_cpool(i) = val
-      pcf%cpool_to_xsmrpool(i) = val
-      pcf%cpool_to_leafc(i) = val
-      pcf%cpool_to_leafc_storage(i) = val
-      pcf%cpool_to_frootc(i) = val
-      pcf%cpool_to_frootc_storage(i) = val
-      pcf%cpool_to_livestemc(i) = val
-      pcf%cpool_to_livestemc_storage(i) = val
-      pcf%cpool_to_deadstemc(i) = val
-      pcf%cpool_to_deadstemc_storage(i) = val
-      pcf%cpool_to_livecrootc(i) = val
-      pcf%cpool_to_livecrootc_storage(i) = val
-      pcf%cpool_to_deadcrootc(i) = val
-      pcf%cpool_to_deadcrootc_storage(i) = val
-      pcf%cpool_to_gresp_storage(i) = val
-      pcf%cpool_leaf_gr(i) = val
-      pcf%cpool_leaf_storage_gr(i) = val
-      pcf%transfer_leaf_gr(i) = val
-      pcf%cpool_froot_gr(i) = val
-      pcf%cpool_froot_storage_gr(i) = val
-      pcf%transfer_froot_gr(i) = val
-      pcf%cpool_livestem_gr(i) = val
-      pcf%cpool_livestem_storage_gr(i) = val
-      pcf%transfer_livestem_gr(i) = val
-      pcf%cpool_deadstem_gr(i) = val
-      pcf%cpool_deadstem_storage_gr(i) = val
-      pcf%transfer_deadstem_gr(i) = val
-      pcf%cpool_livecroot_gr(i) = val
-      pcf%cpool_livecroot_storage_gr(i) = val
-      pcf%transfer_livecroot_gr(i) = val
-      pcf%cpool_deadcroot_gr(i) = val
-      pcf%cpool_deadcroot_storage_gr(i) = val
-      pcf%transfer_deadcroot_gr(i) = val
-      pcf%leafc_storage_to_xfer(i) = val
-      pcf%frootc_storage_to_xfer(i) = val
-      pcf%livestemc_storage_to_xfer(i) = val
-      pcf%deadstemc_storage_to_xfer(i) = val
-      pcf%livecrootc_storage_to_xfer(i) = val
-      pcf%deadcrootc_storage_to_xfer(i) = val
-      pcf%gresp_storage_to_xfer(i) = val
-      pcf%livestemc_to_deadstemc(i) = val
-      pcf%livecrootc_to_deadcrootc(i) = val
-      pcf%gpp(i) = val
-      pcf%mr(i) = val
-      pcf%current_gr(i) = val
-      pcf%transfer_gr(i) = val
-      pcf%storage_gr(i) = val
-      pcf%gr(i) = val
-      pcf%ar(i) = val
-      pcf%rr(i) = val
-      pcf%npp(i) = val
-      pcf%agnpp(i) = val
-      pcf%bgnpp(i) = val
-      pcf%litfall(i) = val
-      pcf%vegfire(i) = val
-      pcf%wood_harvestc(i) = val
-      pcf%pft_cinputs(i) = val
-      pcf%pft_coutputs(i) = val
-      pcf%pft_fire_closs(i) = val
-      pcf%frootc_alloc(i) = val
-      pcf%frootc_loss(i) = val
-      pcf%leafc_alloc(i) = val
-      pcf%leafc_loss(i) = val
-      pcf%woodc_alloc(i) = val
-      pcf%woodc_loss(i) = val
-      if ( crop_prog )then
-         pcf%xsmrpool_to_atm(i)         = val
-         pcf%livestemc_to_litter(i)     = val
-         pcf%grainc_to_food(i)          = val
-         pcf%grainc_xfer_to_grainc(i)   = val
-         pcf%cpool_to_grainc(i)         = val
-         pcf%cpool_to_grainc_storage(i) = val
-         pcf%cpool_grain_gr(i)          = val
-         pcf%cpool_grain_storage_gr(i)  = val
-         pcf%transfer_grain_gr(i)       = val
-         pcf%grainc_storage_to_xfer(i)  = val
-      end if
-   end do
-
-end subroutine CNSetPcf
-!-----------------------------------------------------------------------
-
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: CNSetPnf
-!
-! !INTERFACE:
-subroutine CNSetPnf(num, filter, val, pnf)
-!
-! !DESCRIPTION:
-! Set pft nitrogen flux variables
-!
-! !USES:
-    use surfrdMod , only : crop_prog
-! !ARGUMENTS:
-    implicit none
-    integer , intent(in) :: num
-    integer , intent(in) :: filter(:)
-    real(r8), intent(in) :: val
-    type (pft_nflux_type), intent(inout) :: pnf
-!
-! !REVISION HISTORY:
-! Created by Peter Thornton
-!
-! !LOCAL VARIABLES:
-! local pointers to implicit in/out arrays
-!
-! !OTHER LOCAL VARIABLES:
-   integer :: fi,i     ! loop index
-!EOP
-!------------------------------------------------------------------------
-
-   do fi = 1,num
-      i=filter(fi)
-      pnf%m_leafn_to_litter(i) = val
-      pnf%m_frootn_to_litter(i) = val
-      pnf%m_leafn_storage_to_litter(i) = val
-      pnf%m_frootn_storage_to_litter(i) = val
-      pnf%m_livestemn_storage_to_litter(i) = val
-      pnf%m_deadstemn_storage_to_litter(i) = val
-      pnf%m_livecrootn_storage_to_litter(i) = val
-      pnf%m_deadcrootn_storage_to_litter(i) = val
-      pnf%m_leafn_xfer_to_litter(i) = val
-      pnf%m_frootn_xfer_to_litter(i) = val
-      pnf%m_livestemn_xfer_to_litter(i) = val
-      pnf%m_deadstemn_xfer_to_litter(i) = val
-      pnf%m_livecrootn_xfer_to_litter(i) = val
-      pnf%m_deadcrootn_xfer_to_litter(i) = val
-      pnf%m_livestemn_to_litter(i) = val
-      pnf%m_deadstemn_to_litter(i) = val
-      pnf%m_livecrootn_to_litter(i) = val
-      pnf%m_deadcrootn_to_litter(i) = val
-      pnf%m_retransn_to_litter(i) = val
-      pnf%hrv_leafn_to_litter(i) = val             
-      pnf%hrv_frootn_to_litter(i) = val            
-      pnf%hrv_leafn_storage_to_litter(i) = val     
-      pnf%hrv_frootn_storage_to_litter(i) = val    
-      pnf%hrv_livestemn_storage_to_litter(i) = val 
-      pnf%hrv_deadstemn_storage_to_litter(i) = val 
-      pnf%hrv_livecrootn_storage_to_litter(i) = val
-      pnf%hrv_deadcrootn_storage_to_litter(i) = val
-      pnf%hrv_leafn_xfer_to_litter(i) = val        
-      pnf%hrv_frootn_xfer_to_litter(i) = val       
-      pnf%hrv_livestemn_xfer_to_litter(i) = val    
-      pnf%hrv_deadstemn_xfer_to_litter(i) = val    
-      pnf%hrv_livecrootn_xfer_to_litter(i) = val   
-      pnf%hrv_deadcrootn_xfer_to_litter(i) = val   
-      pnf%hrv_livestemn_to_litter(i) = val         
-      pnf%hrv_deadstemn_to_prod10n(i) = val        
-      pnf%hrv_deadstemn_to_prod100n(i) = val       
-      pnf%hrv_livecrootn_to_litter(i) = val        
-      pnf%hrv_deadcrootn_to_litter(i) = val        
-      pnf%hrv_retransn_to_litter(i) = val           
-      pnf%m_leafn_to_fire(i) = val
-      pnf%m_frootn_to_fire(i) = val
-      pnf%m_leafn_storage_to_fire(i) = val
-      pnf%m_frootn_storage_to_fire(i) = val
-      pnf%m_livestemn_storage_to_fire(i) = val
-      pnf%m_deadstemn_storage_to_fire(i) = val
-      pnf%m_livecrootn_storage_to_fire(i) = val
-      pnf%m_deadcrootn_storage_to_fire(i) = val
-      pnf%m_leafn_xfer_to_fire(i) = val
-      pnf%m_frootn_xfer_to_fire(i) = val
-      pnf%m_livestemn_xfer_to_fire(i) = val
-      pnf%m_deadstemn_xfer_to_fire(i) = val
-      pnf%m_livecrootn_xfer_to_fire(i) = val
-      pnf%m_deadcrootn_xfer_to_fire(i) = val
-      pnf%m_livestemn_to_fire(i) = val
-      pnf%m_deadstemn_to_fire(i) = val
-      pnf%m_deadstemn_to_litter_fire(i) = val
-      pnf%m_livecrootn_to_fire(i) = val
-      pnf%m_deadcrootn_to_fire(i) = val
-      pnf%m_deadcrootn_to_litter_fire(i) = val
-      pnf%m_retransn_to_fire(i) = val
-      pnf%leafn_xfer_to_leafn(i) = val
-      pnf%frootn_xfer_to_frootn(i) = val
-      pnf%livestemn_xfer_to_livestemn(i) = val
-      pnf%deadstemn_xfer_to_deadstemn(i) = val
-      pnf%livecrootn_xfer_to_livecrootn(i) = val
-      pnf%deadcrootn_xfer_to_deadcrootn(i) = val
-      pnf%leafn_to_litter(i) = val
-      pnf%leafn_to_retransn(i) = val
-      pnf%frootn_to_litter(i) = val
-      pnf%retransn_to_npool(i) = val
-      pnf%sminn_to_npool(i) = val
-      pnf%npool_to_leafn(i) = val
-      pnf%npool_to_leafn_storage(i) = val
-      pnf%npool_to_frootn(i) = val
-      pnf%npool_to_frootn_storage(i) = val
-      pnf%npool_to_livestemn(i) = val
-      pnf%npool_to_livestemn_storage(i) = val
-      pnf%npool_to_deadstemn(i) = val
-      pnf%npool_to_deadstemn_storage(i) = val
-      pnf%npool_to_livecrootn(i) = val
-      pnf%npool_to_livecrootn_storage(i) = val
-      pnf%npool_to_deadcrootn(i) = val
-      pnf%npool_to_deadcrootn_storage(i) = val
-      pnf%leafn_storage_to_xfer(i) = val
-      pnf%frootn_storage_to_xfer(i) = val
-      pnf%livestemn_storage_to_xfer(i) = val
-      pnf%deadstemn_storage_to_xfer(i) = val
-      pnf%livecrootn_storage_to_xfer(i) = val
-      pnf%deadcrootn_storage_to_xfer(i) = val
-      pnf%livestemn_to_deadstemn(i) = val
-      pnf%livestemn_to_retransn(i) = val
-      pnf%livecrootn_to_deadcrootn(i) = val
-      pnf%livecrootn_to_retransn(i) = val
-      pnf%ndeploy(i) = val
-      pnf%pft_ninputs(i) = val
-      pnf%pft_noutputs(i) = val
-      pnf%wood_harvestn(i) = val
-      pnf%pft_fire_nloss(i) = val
-      if ( crop_prog )then
-         pnf%livestemn_to_litter(i)     = val
-         pnf%grainn_to_food(i)          = val
-         pnf%grainn_xfer_to_grainn(i)   = val
-         pnf%npool_to_grainn(i)         = val
-         pnf%npool_to_grainn_storage(i) = val
-         pnf%grainn_storage_to_xfer(i)  = val
-      end if
-   end do
-
-end subroutine CNSetPnf
-!-----------------------------------------------------------------------
+    pnf->m_leafn_to_litter = val;
+    pnf->m_frootn_to_litter = val;
+    pnf->m_leafn_storage_to_litter = val;
+    pnf->m_frootn_storage_to_litter = val;
+    pnf->m_livestemn_storage_to_litter = val;
+    pnf->m_deadstemn_storage_to_litter = val;
+    pnf->m_livecrootn_storage_to_litter = val;
+    pnf->m_deadcrootn_storage_to_litter = val;
+    pnf->m_leafn_xfer_to_litter = val;
+    pnf->m_frootn_xfer_to_litter = val;
+    pnf->m_livestemn_xfer_to_litter = val;
+    pnf->m_deadstemn_xfer_to_litter = val;
+    pnf->m_livecrootn_xfer_to_litter = val;
+    pnf->m_deadcrootn_xfer_to_litter = val;
+    pnf->m_livestemn_to_litter = val;
+    pnf->m_deadstemn_to_litter = val;
+    pnf->m_livecrootn_to_litter = val;
+    pnf->m_deadcrootn_to_litter = val;
+    pnf->m_retransn_to_litter = val;
+    pnf->hrv_leafn_to_litter = val             ;
+    pnf->hrv_frootn_to_litter = val            ;
+    pnf->hrv_leafn_storage_to_litter = val     ;
+    pnf->hrv_frootn_storage_to_litter = val    ;
+    pnf->hrv_livestemn_storage_to_litter = val ;
+    pnf->hrv_deadstemn_storage_to_litter = val ;
+    pnf->hrv_livecrootn_storage_to_litter = val;
+    pnf->hrv_deadcrootn_storage_to_litter = val;
+    pnf->hrv_leafn_xfer_to_litter = val        ;
+    pnf->hrv_frootn_xfer_to_litter = val       ;
+    pnf->hrv_livestemn_xfer_to_litter = val    ;
+    pnf->hrv_deadstemn_xfer_to_litter = val    ;
+    pnf->hrv_livecrootn_xfer_to_litter = val   ;
+    pnf->hrv_deadcrootn_xfer_to_litter = val   ;
+    pnf->hrv_livestemn_to_litter = val         ;
+    pnf->hrv_deadstemn_to_prod10n = val        ;
+    pnf->hrv_deadstemn_to_prod100n = val       ;
+    pnf->hrv_livecrootn_to_litter = val        ;
+    pnf->hrv_deadcrootn_to_litter = val        ;
+    pnf->hrv_retransn_to_litter = val           ;
+    pnf->m_leafn_to_fire = val;
+    pnf->m_frootn_to_fire = val;
+    pnf->m_leafn_storage_to_fire = val;
+    pnf->m_frootn_storage_to_fire = val;
+    pnf->m_livestemn_storage_to_fire = val;
+    pnf->m_deadstemn_storage_to_fire = val;
+    pnf->m_livecrootn_storage_to_fire = val;
+    pnf->m_deadcrootn_storage_to_fire = val;
+    pnf->m_leafn_xfer_to_fire = val;
+    pnf->m_frootn_xfer_to_fire = val;
+    pnf->m_livestemn_xfer_to_fire = val;
+    pnf->m_deadstemn_xfer_to_fire = val;
+    pnf->m_livecrootn_xfer_to_fire = val;
+    pnf->m_deadcrootn_xfer_to_fire = val;
+    pnf->m_livestemn_to_fire = val;
+    pnf->m_deadstemn_to_fire = val;
+    pnf->m_deadstemn_to_litter_fire = val;
+    pnf->m_livecrootn_to_fire = val;
+    pnf->m_deadcrootn_to_fire = val;
+    pnf->m_deadcrootn_to_litter_fire = val;
+    pnf->m_retransn_to_fire = val;
+    pnf->leafn_xfer_to_leafn = val;
+    pnf->frootn_xfer_to_frootn = val;
+    pnf->livestemn_xfer_to_livestemn = val;
+    pnf->deadstemn_xfer_to_deadstemn = val;
+    pnf->livecrootn_xfer_to_livecrootn = val;
+    pnf->deadcrootn_xfer_to_deadcrootn = val;
+    pnf->leafn_to_litter = val;
+    pnf->leafn_to_retransn = val;
+    pnf->frootn_to_litter = val;
+    pnf->retransn_to_npool = val;
+    pnf->sminn_to_npool = val;
+    pnf->npool_to_leafn = val;
+    pnf->npool_to_leafn_storage = val;
+    pnf->npool_to_frootn = val;
+    pnf->npool_to_frootn_storage = val;
+    pnf->npool_to_livestemn = val;
+    pnf->npool_to_livestemn_storage = val;
+    pnf->npool_to_deadstemn = val;
+    pnf->npool_to_deadstemn_storage = val;
+    pnf->npool_to_livecrootn = val;
+    pnf->npool_to_livecrootn_storage = val;
+    pnf->npool_to_deadcrootn = val;
+    pnf->npool_to_deadcrootn_storage = val;
+    pnf->leafn_storage_to_xfer = val;
+    pnf->frootn_storage_to_xfer = val;
+    pnf->livestemn_storage_to_xfer = val;
+    pnf->deadstemn_storage_to_xfer = val;
+    pnf->livecrootn_storage_to_xfer = val;
+    pnf->deadcrootn_storage_to_xfer = val;
+    pnf->livestemn_to_deadstemn = val;
+    pnf->livestemn_to_retransn = val;
+    pnf->livecrootn_to_deadcrootn = val;
+    pnf->livecrootn_to_retransn = val;
+    pnf->ndeploy = val;
+    pnf->pft_ninputs = val;
+    pnf->pft_noutputs = val;
+    pnf->wood_harvestn = val;
+    pnf->pft_fire_nloss = val;
+}
 
 !-----------------------------------------------------------------------
 !BOP
